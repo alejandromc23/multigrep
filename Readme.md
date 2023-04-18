@@ -50,6 +50,10 @@ log-localizer "your log data here"
 
 This will output the file names and line numbers where the given logs were generated.
 
+## License
+
+This project is licensed under the MIT License. See [LICENSE](https://github.com/alejandromc23/log-localizer/blob/master/LICENSE) for more information.
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit issues or pull requests
