@@ -1,47 +1,14 @@
 use std::env;
-use std::fs::File;
-use std::io::{BufRead, BufReader, self};
-use std::path::Path;
-use std::process;
+use std::io::Result;
+use log_localizer::get_logs_to_localize;
 
-fn main() -> io::Result<()> {
+mod log_localizer;
+
+fn main() -> Result<()> {
     let args: Vec<String> = env::args().collect();
-    let mut input_args: Vec<String> = Vec::new();
+    let logs_to_localize: Vec<String> = get_logs_to_localize(args);
 
-    if args.len() < 3 { 
-        eprintln!("Usage:");
-        eprintln!("  log-localizer --file path-to-file");
-        eprintln!("  log-localizer --text \"log text\"");
-        process::exit(1);
-    }
-
-    match args[1].as_str() {
-        "--file" => {
-            let file_path = &args[2];
-
-            if !Path::new(file_path).exists() {
-                eprintln!("File does not exist");
-                process::exit(1);
-            }
-
-            let file = File::open(file_path)?;
-            let reader = BufReader::new(file);
-
-            for line in reader.lines() {
-                input_args.push(line?);
-            }
-        }
-        "--text" => {
-            for arg in args[2..].iter() {
-                input_args.push(arg.to_string());
-            }
-        }
-        _ => {
-            eprintln!("Invalid option. Use --file or --text");
-        }
-    }
-
-    for (index, argument) in input_args.iter().enumerate() {
+    for (index, argument) in logs_to_localize.iter().enumerate() {
         println!("{}: {}", index, argument);
     }
 
