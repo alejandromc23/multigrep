@@ -3,14 +3,18 @@ use std::fs::File;
 use std::io::{BufReader, Read, Result};
 use std::path::PathBuf;
 
+use log_localizer::Config;
 use log_localizer::get_logs_to_localize;
 use log_localizer::get_files_to_read;
 
 mod log_localizer;
 
+
 fn main() -> Result<()> {
     let args: Vec<String> = env::args().collect();
-    let logs_to_localize: Vec<String> = get_logs_to_localize(args);
+    let config: Config = Config::build(&args);
+    
+    let logs_to_localize: Vec<String> = get_logs_to_localize(config);
     for (index, argument) in logs_to_localize.iter().enumerate() {
         println!("{}: {}", index, argument);
     }
