@@ -1,35 +1,69 @@
 use std::env;
-use std::fs::File;
 use std::io::{BufReader, Read, Result};
-use std::path::PathBuf;
+use std::process;
 
-use log_localizer::Config;
-use log_localizer::get_logs_to_localize;
-use log_localizer::get_files_to_read;
+use log_localizer::LogLocalizer;
 
 mod log_localizer;
 
+pub struct Config {
+    query: Vec<String>,
+    filename: String,
+}
+
+impl Config {
+    fn build(args: &[String]) -> Self {
+        if args.len() < 3 {
+            eprintln!("Not enough arguments");
+            process::exit(1);
+        }
+
+        let mut config = Self {
+            query: Vec::new(),
+            filename: String::from(""),
+        };
+        
+        match args[1].as_str() {
+            "--file" => {
+                config.filename = args[2].clone();
+            }
+            "--query" => {
+                for arg in args[2..].iter() {
+                    config.query.push(arg.to_string());
+                }
+            }
+            _ => {
+                eprintln!("Invalid option. Use --file or --text");
+                process::exit(1);
+            }
+        }
+
+        config
+    }
+}
 
 fn main() -> Result<()> {
     let args: Vec<String> = env::args().collect();
     let config: Config = Config::build(&args);
+
+    let mut log_localizer: LogLocalizer = LogLocalizer::new(config);
+
+    log_localizer.run();
     
-    let logs_to_localize: Vec<String> = get_logs_to_localize(config);
-    for (index, argument) in logs_to_localize.iter().enumerate() {
+    for (index, argument) in log_localizer.logs_to_localize.iter().enumerate() {
         println!("{}: {}", index, argument);
     }
 
-    let files_to_read: Vec<(PathBuf, File)> = get_files_to_read("./src");    
-
-    for (file_path, file) in files_to_read {
+    for (file_path, file) in log_localizer.files {
         println!("Reading file: {:?}", file_path);
 
         let mut reader = BufReader::new(file);
         let mut file_data = String::new();
         reader.read_to_string(&mut file_data)?;
 
-        println!("{}", file_data);
+        // println!("{}", file_data);
     }
+
 
     Ok(())
 }
