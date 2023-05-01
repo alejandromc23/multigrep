@@ -1,5 +1,5 @@
 use std::fs::{File, self};
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Result};
 use std::path::Path;
 use std::process;
 use std::path::PathBuf;
@@ -21,8 +21,24 @@ impl Default for LogLocalizer {
 }
 
 impl LogLocalizer {
-    pub fn run(&mut self) {
-        // TODO: Implement
+    pub fn run(&mut self) -> Result<()> {
+        for (file_path, file) in self.files.iter() {
+            println!("Reading file: {:?}", file_path);
+
+            let reader = BufReader::new(file);
+
+            for (i, line) in reader.lines().enumerate() {
+                let line = line?;
+                for log in self.logs_to_localize.iter() {
+                    if line.contains(log) {
+                        println!("{}: {}", file_path.display(), i+1);
+                    }
+                }
+            }
+        }
+        println!("");
+        
+        Ok(())
     }
 
     pub fn new(config: Config) -> Self {

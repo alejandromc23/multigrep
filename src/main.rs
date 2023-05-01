@@ -1,5 +1,5 @@
 use std::env;
-use std::io::{BufReader, Read, Result};
+use std::io::Result;
 use std::process;
 
 use log_localizer::LogLocalizer;
@@ -48,22 +48,11 @@ fn main() -> Result<()> {
 
     let mut log_localizer: LogLocalizer = LogLocalizer::new(config);
 
-    log_localizer.run();
-    
+    println!("\nLogs to localize:");
     for (index, argument) in log_localizer.logs_to_localize.iter().enumerate() {
         println!("{}: {}", index, argument);
     }
+    println!("");
 
-    for (file_path, file) in log_localizer.files {
-        println!("Reading file: {:?}", file_path);
-
-        let mut reader = BufReader::new(file);
-        let mut file_data = String::new();
-        reader.read_to_string(&mut file_data)?;
-
-        // println!("{}", file_data);
-    }
-
-
-    Ok(())
+    log_localizer.run()
 }
