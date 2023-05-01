@@ -4,7 +4,7 @@ use std::path::Path;
 use std::process;
 use std::path::PathBuf;
 
-use crate::Config;
+use crate::flags::Flags;
 
 pub struct LogLocalizer {
     pub logs_to_localize: Vec<String>,
@@ -21,7 +21,13 @@ impl Default for LogLocalizer {
 }
 
 impl LogLocalizer {
-    pub fn run(&mut self) -> Result<()> {
+    pub fn run(&self) -> Result<()> {
+        println!("\nLogs to localize:");
+        for (index, argument) in self.logs_to_localize.iter().enumerate() {
+            println!("{}: {}", index, argument);
+        }
+        println!("");
+
         for (file_path, file) in self.files.iter() {
             println!("Reading file: {:?}", file_path);
 
@@ -31,7 +37,7 @@ impl LogLocalizer {
                 let line = line?;
                 for log in self.logs_to_localize.iter() {
                     if line.contains(log) {
-                        println!("{}: {}", file_path.display(), i+1);
+                        println!("Log found at line: {}", i+1);
                     }
                 }
             }
@@ -41,22 +47,22 @@ impl LogLocalizer {
         Ok(())
     }
 
-    pub fn new(config: Config) -> Self {
+    pub fn new(flags: Flags) -> Self {
         let mut log_localizer = LogLocalizer::default();
-        log_localizer.get_logs_to_localize(config);
+        log_localizer.get_logs_to_localize(flags);
         log_localizer.get_files_to_read("./src");
 
         log_localizer
     }
         
-    pub fn get_logs_to_localize(&mut self, config: Config) {
-        if config.filename != "" {
-            if !Path::new(&config.filename).exists() {
+    pub fn get_logs_to_localize(&mut self, flags: Flags) {
+        if flags.filename != "" {
+            if !Path::new(&flags.filename).exists() {
                 eprintln!("File does not exist");
                 process::exit(1);
             }
 
-            let file = match File::open(&config.filename) {
+            let file = match File::open(&flags.filename) {
                 Ok(file) => file,
                 Err(error) => {
                     eprintln!("Error opening file: {}", error);
@@ -77,8 +83,8 @@ impl LogLocalizer {
             }
         }
 
-        if config.query.len() > 0 {
-            for arg in config.query.iter() {
+        if flags.query.len() > 0 {
+            for arg in flags.query.iter() {
                 self.logs_to_localize.push(arg.to_string());
             }
         }
