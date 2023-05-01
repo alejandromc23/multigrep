@@ -1,17 +1,17 @@
 use std::env;
 use std::io::Result;
 
-use log_localizer::LogLocalizer;
 use flags::Flags;
+use multigrep::Multigrep;
 
-mod log_localizer;
+mod multigrep;
 mod flags;
 
 fn main() -> Result<()> {
     let args: Vec<String> = env::args().collect();
     let flags: Flags = Flags::from_args(&args);
 
-    let log_localizer: LogLocalizer = LogLocalizer::new(flags);
+    let multigrep: Multigrep = Multigrep::new(flags);
 
-    log_localizer.run()
+    multigrep.run()
 }

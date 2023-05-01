@@ -6,24 +6,24 @@ use std::path::PathBuf;
 
 use crate::flags::Flags;
 
-pub struct LogLocalizer {
-    pub logs_to_localize: Vec<String>,
+pub struct Multigrep {
+    pub queries_to_localize: Vec<String>,
     pub files: Vec<(PathBuf, File)>,
 }
 
-impl Default for LogLocalizer {
+impl Default for Multigrep {
     fn default() -> Self {
         Self {
-            logs_to_localize: Vec::new(),
+            queries_to_localize: Vec::new(),
             files: Vec::new(),
         }
     }
 }
 
-impl LogLocalizer {
+impl Multigrep {
     pub fn run(&self) -> Result<()> {
-        println!("\nLogs to localize:");
-        for (index, argument) in self.logs_to_localize.iter().enumerate() {
+        println!("\nQueries to localize:");
+        for (index, argument) in self.queries_to_localize.iter().enumerate() {
             println!("{}: {}", index, argument);
         }
         println!("");
@@ -35,9 +35,9 @@ impl LogLocalizer {
 
             for (i, line) in reader.lines().enumerate() {
                 let line = line?;
-                for log in self.logs_to_localize.iter() {
-                    if line.contains(log) {
-                        println!("Log found at line: {}", i+1);
+                for query in self.queries_to_localize.iter() {
+                    if line.contains(query) {
+                        println!("Found at line: {}", i+1);
                     }
                 }
             }
@@ -48,14 +48,14 @@ impl LogLocalizer {
     }
 
     pub fn new(flags: Flags) -> Self {
-        let mut log_localizer = LogLocalizer::default();
-        log_localizer.get_logs_to_localize(flags);
-        log_localizer.get_files_to_read("./src");
+        let mut multigrep = Multigrep::default();
+        multigrep.get_queries_to_localize(flags);
+        multigrep.get_files_to_read("./src");
 
-        log_localizer
+        multigrep
     }
         
-    pub fn get_logs_to_localize(&mut self, flags: Flags) {
+    pub fn get_queries_to_localize(&mut self, flags: Flags) {
         if flags.filename != "" {
             if !Path::new(&flags.filename).exists() {
                 eprintln!("File does not exist");
@@ -74,7 +74,7 @@ impl LogLocalizer {
 
             for line_result in reader.lines() {
                 match line_result {
-                    Ok(line) => self.logs_to_localize.push(line),
+                    Ok(line) => self.queries_to_localize.push(line),
                     Err(error) => {
                         eprintln!("Error reading line: {}", error);
                         process::exit(1);
@@ -85,7 +85,7 @@ impl LogLocalizer {
 
         if flags.query.len() > 0 {
             for arg in flags.query.iter() {
-                self.logs_to_localize.push(arg.to_string());
+                self.queries_to_localize.push(arg.to_string());
             }
         }
     }

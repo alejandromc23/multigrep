@@ -1,12 +1,12 @@
-# Log Localizer
+# Multigrep
 
-`log-localizer` is a simple command-line tool written in Rust that helps you localize logs or log files by displaying which files and lines have generated the given logs.
+`multigrep` is a simple command-line tool written in Rust that helps you localize queries by displaying which files and lines have generated the given queries.
 
 ## Features
 
-- Localize logs from a single file or provided as an input.
-- Display the file names and line numbers where the logs were generated.
-- Easy to use and efficient in processing large log files.
+- Localize queries from a single file or provided as an input.
+- Display the file names and line numbers where the queries were generated.
+- Easy to use and efficient in processing large files.
 
 ## Prerequisites
 
@@ -17,13 +17,13 @@
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/alejandromc23/log-localizer.git
+git clone https://github.com/alejandromc23/multigrep.git
 ```
 
 2. Change into the project directory:
 
 ```bash
-cd log-localizer
+cd multigrep
 ```
 
 3. Build the project:
@@ -32,27 +32,27 @@ cd log-localizer
 cargo build --release
 ```
 
-4. Add the binary to your `PATH` or copy it to a directory in your `PATH`. The binary will be located in `target/release/log-localizer`
+4. Add the binary to your `PATH` or copy it to a directory in your `PATH`. The binary will be located in `target/release/multigrep`
 
 ## Usage
 
-To localize logs from log file:
+To localize queries from file:
 
 ```bash
-log-localizer -f /path/to/your/logfile.log 
+multigrep -f /path/to/your/file 
 ```
 
-To localize logs from the command line:
+To localize queries from the command line:
 
 ```bash
-log-localizer "your log data here"
+multigrep "query 1" "query 2"
 ```
 
-This will output the file names and line numbers where the given logs were generated.
+This will output the file names and line numbers where the given queries were generated.
 
 ## License
 
-This project is licensed under the MIT License. See [LICENSE](https://github.com/alejandromc23/log-localizer/blob/master/LICENSE) for more information.
+This project is licensed under the MIT License. See [LICENSE](https://github.com/alejandromc23/multigrep/blob/master/LICENSE) for more information.
 
 ## Contributing
 
