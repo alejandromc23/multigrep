@@ -11,7 +11,7 @@ fn main() -> Result<()> {
     let args: Vec<String> = env::args().collect();
     let flags: Flags = Flags::from_args(&args);
 
-    let multigrep: Multigrep = Multigrep::new(flags);
+    let mut multigrep: Multigrep = Multigrep::new(flags);
 
     multigrep.run()
 }

@@ -1,68 +1,60 @@
 use std::fs::{File, self};
 use std::io::{BufRead, BufReader, Result};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process;
-use std::path::PathBuf;
 
 use crate::flags::Flags;
 
 pub struct Multigrep {
-    pub queries_to_localize: Vec<String>,
-    pub files: Vec<(PathBuf, File)>,
-}
-
-impl Default for Multigrep {
-    fn default() -> Self {
-        Self {
-            queries_to_localize: Vec::new(),
-            files: Vec::new(),
-        }
-    }
+    pub flags: Flags,
 }
 
 impl Multigrep {
-    pub fn run(&self) -> Result<()> {
+    pub fn run(&mut self) -> Result<()> {
+        let queries = self.get_queries();
+        let files = self.get_files();
+
         println!("\nQueries to localize:");
-        for (index, argument) in self.queries_to_localize.iter().enumerate() {
+        for (index, argument) in queries.iter().enumerate() {
             println!("{}: {}", index, argument);
         }
         println!("");
 
-        for (file_path, file) in self.files.iter() {
+        for (file_path, file) in files.iter() {
             println!("Reading file: {:?}", file_path);
 
             let reader = BufReader::new(file);
 
             for (i, line) in reader.lines().enumerate() {
                 let line = line?;
-                for query in self.queries_to_localize.iter() {
-                    if line.contains(query) {
+                for queries in queries.iter() {
+                    if line.contains(queries) {
                         println!("Found at line: {}", i+1);
                     }
                 }
             }
+            println!("");
         }
-        println!("");
         
         Ok(())
     }
 
     pub fn new(flags: Flags) -> Self {
-        let mut multigrep = Multigrep::default();
-        multigrep.get_queries_to_localize(flags);
-        multigrep.get_files_to_read("./src");
-
-        multigrep
+        Self {
+            flags,
+        }
     }
         
-    pub fn get_queries_to_localize(&mut self, flags: Flags) {
-        if flags.filename != "" {
-            if !Path::new(&flags.filename).exists() {
-                eprintln!("File does not exist");
+    pub fn get_queries(&mut self) -> Vec<String> {
+        let mut queries = Vec::new();
+
+        for filename in self.flags.filenames.iter() {
+            if !Path::new(filename).exists() {
+                eprintln!("File does not exist: {}", filename);
                 process::exit(1);
             }
 
-            let file = match File::open(&flags.filename) {
+            let file = match File::open(filename) {
                 Ok(file) => file,
                 Err(error) => {
                     eprintln!("Error opening file: {}", error);
@@ -74,7 +66,7 @@ impl Multigrep {
 
             for line_result in reader.lines() {
                 match line_result {
-                    Ok(line) => self.queries_to_localize.push(line),
+                    Ok(line) => queries.push(line),
                     Err(error) => {
                         eprintln!("Error reading line: {}", error);
                         process::exit(1);
@@ -83,44 +75,48 @@ impl Multigrep {
             }
         }
 
-        if flags.query.len() > 0 {
-            for arg in flags.query.iter() {
-                self.queries_to_localize.push(arg.to_string());
-            }
+        for query in self.flags.queries.iter() {
+            queries.push(query.to_string());
         }
+
+        queries
     }
 
-    pub fn get_files_to_read(&mut self, directory_path: &str) {
-        self.files = Vec::new();
+    pub fn get_files(&self) -> Vec<(PathBuf, File)> {
+        let mut files = Vec::new();
 
-        let paths = match fs::read_dir(directory_path) {
-            Ok(paths) => paths,
-            Err(error) => {
-                eprintln!("Error reading directory: {}", error);
-                process::exit(1);
-            }
-        };
-
-        for path in paths {
-            let path = match path {
-                Ok(dir_entry) => dir_entry,
+        for read_path in self.flags.paths.iter() {
+            let paths = match fs::read_dir(read_path) {
+                Ok(paths) => paths,
                 Err(error) => {
-                    eprintln!("Error reading path: {}", error);
+                    eprintln!("Error reading directory: {}", error);
                     process::exit(1);
                 }
             };
 
-            let file_path = path.path();
-            let file_result = File::open(&file_path);
+            for path in paths {
+                let path = match path {
+                    Ok(dir_entry) => dir_entry,
+                    Err(error) => {
+                        eprintln!("Error reading path: {}", error);
+                        process::exit(1);
+                    }
+                };
 
-            match file_result {
-                Ok(file) => self.files.push((file_path, file)),
-                Err(error) => {
-                    eprintln!("Error opening file: {}", error);
-                    process::exit(1);
-                }
-            };
-        } 
+                let file_path = path.path();
+                let file_result = File::open(&file_path);
+
+                match file_result {
+                    Ok(file) => files.push((file_path, file)),
+                    Err(error) => {
+                        eprintln!("Error opening file: {}", error);
+                        process::exit(1);
+                    }
+                };
+            } 
+        }
+
+        files
     }
 }
 
