@@ -1,9 +1,10 @@
 use std::process;
 
-const VALID_FLAGS: [&str; 8] = ["--file", "--query", "--insensitive", "--path", "-f", "-q", "-i", "-p"];
+const VALID_FLAGS: [&str; 10] = ["--file", "--query", "--insensitive", "--path", "--number-line", "-f", "-q", "-i", "-p", "-n"];
 
 pub struct Flags {
     pub is_case_sensitive: bool,
+    pub show_line_numbers: bool,
     pub queries: Vec<String>,
     pub filenames: Vec<String>,
     pub paths: Vec<String>,
@@ -18,6 +19,7 @@ impl Flags {
 
        let mut flags = Self {
             is_case_sensitive: true,
+            show_line_numbers: false,
             queries: Vec::new(),
             filenames: Vec::new(),
             paths: Vec::new(),
@@ -25,14 +27,17 @@ impl Flags {
 
         for flag in args.iter() {
             match flag.as_str() {
+                "--insensitive" | "-i" => {
+                    flags.is_case_sensitive = false;
+                }
+                "--number-line" | "-n" => {
+                    flags.show_line_numbers = true;
+                }
                 "--file" | "-f" => {
                     flags.filenames.append(&mut Flags::get_args_by_flag(args, flag));
                 }
                 "--query" | "-q" => {
                    flags.queries.append(&mut Flags::get_args_by_flag(args, flag)); 
-                }
-                "--insensitive" | "-i" => {
-                    flags.is_case_sensitive = false;
                 }
                 "--path" | "-p" => {
                     flags.paths.append(&mut Flags::get_args_by_flag(args, flag)); 

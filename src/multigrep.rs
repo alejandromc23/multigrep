@@ -26,10 +26,19 @@ impl Multigrep {
             let reader = BufReader::new(file);
 
             for (i, line) in reader.lines().enumerate() {
-                let line = line?;
-                for queries in queries.iter() {
-                    if line.contains(queries) {
-                        println!("Found at line: {}", i+1);
+                let mut line = line?;
+                for query in queries.iter() {
+                    if !self.flags.is_case_sensitive {
+                        line = line.to_lowercase();
+                    }
+
+                    if line.contains(query) {
+                        if self.flags.show_line_numbers {
+                            print!("{}: {}", i+1, line);
+                            continue;
+                        }
+
+                        println!("{}", line);
                     }
                 }
             }
@@ -76,7 +85,13 @@ impl Multigrep {
         }
 
         for query in self.flags.queries.iter() {
-            queries.push(query.to_string());
+            let mut string_query = query.to_string();
+
+            if self.flags.is_case_sensitive {
+                string_query = string_query.to_lowercase();
+            }
+
+            queries.push(string_query);
         }
 
         queries
