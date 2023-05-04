@@ -1,19 +1,26 @@
 use std::fs::{File, self};
-use std::io::{BufRead, BufReader, Result};
+use std::io::{BufRead, BufReader, Result, Read};
 use std::path::{Path, PathBuf};
 use std::process;
+use std::str;
 
 use crate::flags::Flags;
 
 pub struct Multigrep {
-    pub flags: Flags,
+    flags: Flags,
 }
 
 impl Multigrep {
+    pub fn new(flags: Flags) -> Self {
+        Self {
+            flags,
+        }
+    }
+
     pub fn run(&mut self) -> Result<()> {
         let queries = self.get_queries();
         let files = self.get_files();
-
+        
         println!("\nQueries to localize:");
         for (index, argument) in queries.iter().enumerate() {
             println!("{}: {}", index, argument);
@@ -21,6 +28,10 @@ impl Multigrep {
         println!("");
 
         for (file_path, file) in files.iter() {
+            if !Self::is_valid_utf8(file_path) {
+                continue;
+            }
+
             println!("Reading file: {:?}", file_path);
 
             let reader = BufReader::new(file);
@@ -48,12 +59,6 @@ impl Multigrep {
         Ok(())
     }
 
-    pub fn new(flags: Flags) -> Self {
-        Self {
-            flags,
-        }
-    }
-        
     pub fn get_queries(&mut self) -> Vec<String> {
         let mut queries = Vec::new();
 
@@ -101,37 +106,70 @@ impl Multigrep {
         let mut files = Vec::new();
 
         for read_path in self.flags.paths.iter() {
-            let paths = match fs::read_dir(read_path) {
-                Ok(paths) => paths,
+            let path = PathBuf::from(read_path);
+            Self::process_path(&path, &mut files);
+        }
+
+        files
+    }
+
+    fn process_path(path: &Path, files: &mut Vec<(PathBuf, File)>) {
+        if !path.exists() {
+            eprintln!("Path does not exist: {}", path.display());
+            process::exit(1);
+        }
+
+        if path.is_file() {
+            let file_result = File::open(path);
+
+            match file_result {
+                Ok(file) => files.push((path.to_path_buf(), file)),
                 Err(error) => {
-                    eprintln!("Error reading directory: {}", error);
+                    eprintln!("Error opening file: {}", error);
                     process::exit(1);
                 }
             };
 
-            for path in paths {
-                let path = match path {
-                    Ok(dir_entry) => dir_entry,
-                    Err(error) => {
-                        eprintln!("Error reading path: {}", error);
-                        process::exit(1);
-                    }
-                };
-
-                let file_path = path.path();
-                let file_result = File::open(&file_path);
-
-                match file_result {
-                    Ok(file) => files.push((file_path, file)),
-                    Err(error) => {
-                        eprintln!("Error opening file: {}", error);
-                        process::exit(1);
-                    }
-                };
-            } 
+            return;
         }
 
-        files
+        match fs::read_dir(path) {
+            Ok(paths) => {
+                for entry in paths {
+                    match entry {
+                        Ok(dir_entry) => {
+                            Self::process_path(&dir_entry.path(), files);
+                        },
+                        Err(error) => {
+                            eprintln!("Error reading path: {}", error);
+                            process::exit(1);
+                        }
+                    }
+                }
+            }
+            Err(error) => {
+                eprintln!("Error reading directory: {}", error);
+                process::exit(1);
+            }
+        }
+    }
+
+    fn is_valid_utf8(path: &Path) -> bool {
+        let mut file = match File::open(path) {
+            Ok(file) => file,
+            Err(error) => {
+                eprintln!("Error opening file: {}", error);
+                return false;
+            }
+        };
+
+        let mut bytes = Vec::new();
+        if let Err(error) = file.read_to_end(&mut bytes) {
+            eprintln!("Error reading file: {}", error);
+            return false;
+        }
+
+        str::from_utf8(&bytes).is_ok()
     }
 }
 
