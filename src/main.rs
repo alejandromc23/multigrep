@@ -1,5 +1,6 @@
 use std::env;
 use std::io::Result;
+use std::process;
 
 use flags::Flags;
 use multigrep::Multigrep;
@@ -13,5 +14,11 @@ fn main() -> Result<()> {
 
     let mut multigrep: Multigrep = Multigrep::new(flags);
 
-    multigrep.run()
+    match multigrep.run() {
+        Ok(_) => Ok(()),
+        Err(e) => {
+            eprintln!("{}", e);
+            process::exit(1);
+        },
+    }
 }

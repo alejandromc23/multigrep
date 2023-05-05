@@ -1,5 +1,5 @@
-use std::fs::{File, self};
-use std::io::{BufRead, BufReader, Result, Read};
+use std::fs::{File, read_to_string, read_dir};
+use std::io::{Result, Read};
 use std::path::{Path, PathBuf};
 use std::process;
 use std::str;
@@ -21,23 +21,20 @@ impl Multigrep {
         let queries = self.get_queries();
         let files = self.get_files();
         
-        println!("\nQueries to localize:");
-        for (index, argument) in queries.iter().enumerate() {
-            println!("{}: {}", index, argument);
-        }
-        println!("");
+        Self::show_queries(&queries);
 
-        for (file_path, file) in files.iter() {
+        for file_path in files.iter() {
             if !Self::is_valid_utf8(file_path) {
                 continue;
             }
 
-            println!("Reading file: {:?}", file_path);
+            println!("Reading file: {:?}",file_path);
+            
+            let file = read_to_string(file_path).unwrap();
+            
+            file.lines().enumerate().for_each(|(i, file_line)| {
+                let mut line = file_line.trim().to_string();
 
-            let reader = BufReader::new(file);
-
-            for (i, line) in reader.lines().enumerate() {
-                let mut line = line?;
                 for query in queries.iter() {
                     if !self.flags.is_case_sensitive {
                         line = line.to_lowercase();
@@ -45,15 +42,14 @@ impl Multigrep {
 
                     if line.contains(query) {
                         if self.flags.show_line_numbers {
-                            print!("{}: {}", i+1, line);
+                            print!("{}: {}\n", i+1, line);
                             continue;
                         }
 
                         println!("{}", line);
                     }
                 }
-            }
-            println!("");
+            });
         }
         
         Ok(())
@@ -62,34 +58,19 @@ impl Multigrep {
     pub fn get_queries(&mut self) -> Vec<String> {
         let mut queries = Vec::new();
 
-        for filename in self.flags.filenames.iter() {
+        self.flags.filenames.iter().for_each(|filename| {
             if !Path::new(filename).exists() {
-                eprintln!("File does not exist: {}", filename);
-                process::exit(1);
+                Self::exit_with_error(format!("File does not exist: {}", filename));
             }
 
-            let file = match File::open(filename) {
-                Ok(file) => file,
-                Err(error) => {
-                    eprintln!("Error opening file: {}", error);
-                    process::exit(1);
-                }
-            };
+            let file = read_to_string(filename)
+                .expect(&format!("Error reading file: {}", filename));
 
-            let reader = BufReader::new(file);
+            let lines = file.lines().map(|line| line.to_string());
+            queries.extend(lines);
+        });
 
-            for line_result in reader.lines() {
-                match line_result {
-                    Ok(line) => queries.push(line),
-                    Err(error) => {
-                        eprintln!("Error reading line: {}", error);
-                        process::exit(1);
-                    }
-                }
-            }
-        }
-
-        for query in self.flags.queries.iter() {
+        self.flags.queries.iter().for_each(|query| {
             let mut string_query = query.to_string();
 
             if self.flags.is_case_sensitive {
@@ -97,79 +78,68 @@ impl Multigrep {
             }
 
             queries.push(string_query);
-        }
+        });
 
         queries
     }
 
-    pub fn get_files(&self) -> Vec<(PathBuf, File)> {
+
+    pub fn get_files(&self) -> Vec<PathBuf> {
         let mut files = Vec::new();
 
-        for read_path in self.flags.paths.iter() {
-            let path = PathBuf::from(read_path);
+        self.flags.paths.iter().for_each(|path_str| {
+            let path = PathBuf::from(path_str);
             Self::process_path(&path, &mut files);
-        }
+        });
 
         files
     }
 
-    fn process_path(path: &Path, files: &mut Vec<(PathBuf, File)>) {
+    fn process_path(path: &Path, files: &mut Vec<PathBuf>) {
         if !path.exists() {
-            eprintln!("Path does not exist: {}", path.display());
-            process::exit(1);
+            Self::exit_with_error(format!("Path does not exist: {}", path.display()));
         }
 
         if path.is_file() {
-            let file_result = File::open(path);
+            File::open(path).expect(&format!("Error opening file: {}", path.display()));
 
-            match file_result {
-                Ok(file) => files.push((path.to_path_buf(), file)),
-                Err(error) => {
-                    eprintln!("Error opening file: {}", error);
-                    process::exit(1);
-                }
-            };
-
+            files.push(path.to_path_buf());
             return;
         }
 
-        match fs::read_dir(path) {
-            Ok(paths) => {
-                for entry in paths {
-                    match entry {
-                        Ok(dir_entry) => {
-                            Self::process_path(&dir_entry.path(), files);
-                        },
-                        Err(error) => {
-                            eprintln!("Error reading path: {}", error);
-                            process::exit(1);
-                        }
-                    }
+        let paths = read_dir(path).expect(&format!("Error reading path: {}", path.display()));
+
+        for entry in paths {
+            match entry {
+                Ok(dir_entry) => {
+                    Self::process_path(&dir_entry.path(), files);
+                },
+                Err(error) => {
+                    Self::exit_with_error(format!("Error reading path: {}", error));
                 }
-            }
-            Err(error) => {
-                eprintln!("Error reading directory: {}", error);
-                process::exit(1);
             }
         }
     }
 
     fn is_valid_utf8(path: &Path) -> bool {
-        let mut file = match File::open(path) {
-            Ok(file) => file,
-            Err(error) => {
-                eprintln!("Error opening file: {}", error);
-                return false;
-            }
-        };
-
+        let mut file = File::open(path).unwrap();
         let mut bytes = Vec::new();
-        if let Err(error) = file.read_to_end(&mut bytes) {
-            eprintln!("Error reading file: {}", error);
-            return false;
-        }
+
+        file.read_to_end(&mut bytes).unwrap();
 
         str::from_utf8(&bytes).is_ok()
     }
-}
 
+    fn exit_with_error(error: String) {
+        eprintln!("{}", error);
+        process::exit(1);
+    }
+
+    fn show_queries(queries: &Vec<String>) {
+        println!("Queries to localize:");
+        queries.iter().enumerate().for_each(|(index, query)| {
+            println!("{}: {}", index, query);
+        });
+        println!("");
+    }
+}
