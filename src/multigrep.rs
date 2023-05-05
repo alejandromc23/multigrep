@@ -42,7 +42,7 @@ impl Multigrep {
 
                     if line.contains(query) {
                         if self.flags.show_line_numbers {
-                            print!("{}: {}\n", i+1, line);
+                            println!("{}: {}", i+1, line);
                             continue;
                         }
 
