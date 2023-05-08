@@ -3,6 +3,7 @@ use std::io::{Result, Read};
 use std::path::{Path, PathBuf};
 use std::process;
 use std::str;
+use colored::Colorize;
 
 use crate::flags::Flags;
 
@@ -36,17 +37,19 @@ impl Multigrep {
                 let mut line = file_line.trim().to_string();
 
                 for query in queries.iter() {
+                    let mut output = line.clone();
+                    
                     if !self.flags.is_case_sensitive {
                         line = line.to_lowercase();
                     }
 
                     if line.contains(query) {
                         if self.flags.show_line_numbers {
-                            println!("{}: {}", i+1, line);
-                            continue;
+                            output = format!("{}: {}", i+1, output);
                         }
 
-                        println!("{}", line);
+                        output = output.replace(query, &query.red().to_string());
+                        println!("{}", output);
                     }
                 }
             });
