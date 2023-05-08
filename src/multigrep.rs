@@ -53,6 +53,7 @@ impl Multigrep {
                     }
                 }
             });
+            println!("");
         }
         
         Ok(())
