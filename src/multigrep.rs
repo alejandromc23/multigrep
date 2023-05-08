@@ -3,7 +3,7 @@ use std::io::{Result, Read};
 use std::path::{Path, PathBuf};
 use std::process;
 use std::str;
-use colored::Colorize;
+use rand::Rng;
 
 use crate::flags::Flags;
 
@@ -29,29 +29,34 @@ impl Multigrep {
                 continue;
             }
 
-            println!("Reading file: {:?}",file_path);
-            
+            println!("{}Reading file: {:?}{}", "\x1b[38;2;255;165;0m", file_path, "\x1b[0m");
+ 
             let file = read_to_string(file_path).unwrap();
             
             file.lines().enumerate().for_each(|(i, file_line)| {
                 let mut line = file_line.trim().to_string();
+                let mut has_line_matches = false;
 
-                for query in queries.iter() {
-                    let mut output = line.clone();
-                    
+                for (query, replacement) in queries.iter() {
                     if !self.flags.is_case_sensitive {
                         line = line.to_lowercase();
                     }
 
                     if line.contains(query) {
-                        if self.flags.show_line_numbers {
-                            output = format!("{}: {}", i+1, output);
-                        }
-
-                        output = output.replace(query, &query.red().to_string());
-                        println!("{}", output);
+                        line = line.replace(query, replacement);
+                        has_line_matches = true;
                     }
                 }
+
+                if !has_line_matches {
+                    return;
+                }
+
+                if self.flags.show_line_numbers {
+                    line = format!("{}: {}", i+1, line);
+                }
+
+                println!("{}", line);
             });
             println!("");
         }
@@ -59,7 +64,7 @@ impl Multigrep {
         Ok(())
     }
 
-    pub fn get_queries(&mut self) -> Vec<String> {
+    pub fn get_queries(&mut self) -> Vec<(String, String)> {
         let mut queries = Vec::new();
 
         self.flags.filenames.iter().for_each(|filename| {
@@ -70,7 +75,8 @@ impl Multigrep {
             let file = read_to_string(filename)
                 .expect(&format!("Error reading file: {}", filename));
 
-            let lines = file.lines().map(|line| line.to_string());
+            let lines = file.lines().map(|line| (line.to_string(), Self::get_random_color_replacement(line)));
+
             queries.extend(lines);
         });
 
@@ -81,7 +87,7 @@ impl Multigrep {
                 string_query = string_query.to_lowercase();
             }
 
-            queries.push(string_query);
+            queries.push((string_query.clone(), Self::get_random_color_replacement(&string_query)));
         });
 
         queries
@@ -139,11 +145,17 @@ impl Multigrep {
         process::exit(1);
     }
 
-    fn show_queries(queries: &Vec<String>) {
+    fn show_queries(queries: &Vec<(String, String)>) {
         println!("Queries to localize:");
         queries.iter().enumerate().for_each(|(index, query)| {
-            println!("{}: {}", index, query);
+            println!("{}: {}", index, query.1);
         });
         println!("");
+    }
+
+    fn get_random_color_replacement(pattern: &str) -> String {
+        let mut rng = rand::thread_rng();
+        let color_code = format!("\x1b[38;5;{}m", rng.gen_range(0..=255));
+        format!("{}{}{}", color_code, pattern, "\x1b[0m")
     }
 }
