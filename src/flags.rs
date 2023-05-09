@@ -1,4 +1,5 @@
 use std::process;
+use std::env;
 
 const VALID_FLAGS: [&str; 10] = ["--query", "--insensitive", "--path", "--number-line", "--regexp", "-q", "-i", "-p", "-n", "-e"];
 
@@ -12,41 +13,54 @@ pub struct Flags {
 
 impl Flags {
     pub fn from_args(args: &[String]) -> Self {
-        if args.len() < 3 {
-            eprintln!("Not enough arguments");
-            process::exit(1);
-        }
+        let mut paths = Vec::new();
+        let mut queries = Vec::new();
+        let mut regexps = Vec::new();
+        let mut is_case_sensitive = true;
+        let mut show_line_numbers = false;
 
-       let mut flags = Self {
-            is_case_sensitive: true,
-            show_line_numbers: false,
-            queries: Vec::new(),
-            paths: Vec::new(),
-            regexps: Vec::new(),
-        };
+        let mut has_query_or_regexp_arg = false;
 
-        for flag in args.iter() {
+        args.iter().for_each(|flag| {
             match flag.as_str() {
                 "--insensitive" | "-i" => {
-                    flags.is_case_sensitive = false;
+                    is_case_sensitive = false;
                 }
                 "--number-line" | "-n" => {
-                    flags.show_line_numbers = true;
+                    show_line_numbers = true;
                 }
                 "--query" | "-q" => {
-                   flags.queries.append(&mut Flags::get_args_by_flag(args, flag)); 
+                    has_query_or_regexp_arg = true;
+                    queries.append(&mut Self::get_args_by_flag(args, flag));
                 }
                 "--path" | "-p" => {
-                    flags.paths.append(&mut Flags::get_args_by_flag(args, flag)); 
+                    paths.append(&mut Self::get_args_by_flag(args, flag));
                 }
                 "--regexp" | "-e" => {
-                    flags.regexps.append(&mut Flags::get_args_by_flag(args, flag)); 
+                    has_query_or_regexp_arg = true;
+                    regexps.append(&mut Self::get_args_by_flag(args, flag));
                 }
                 _ => {}
             }
+        });
+
+        // If no path argument was passed, use the current directory
+        if paths.is_empty() {
+            paths.push(env::current_dir().unwrap().to_string_lossy().to_string());
         }
 
-        flags
+        if !has_query_or_regexp_arg {
+            eprintln!("Error: Must specify at least one query or regexp argument.");
+            process::exit(1);
+        }
+
+        Self {
+            is_case_sensitive,
+            show_line_numbers,
+            queries,
+            paths,
+            regexps,
+        }
     }
 
     pub fn get_args_by_flag(args: &[String], flag: &str) -> Vec<String> {
