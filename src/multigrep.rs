@@ -106,15 +106,9 @@ impl Multigrep {
 
         let paths = read_dir(path).expect(&format!("Error reading path: {}", path.display()));
 
-        for entry in paths {
-            match entry {
-                Ok(dir_entry) => {
-                    Self::process_path(&dir_entry.path(), files);
-                },
-                Err(error) => {
-                    Self::exit_with_error(format!("Error reading path: {}", error));
-                }
-            }
+        for entry_result in paths {
+            let entry = entry_result.expect(&format!("Error reading path: {}", path.display()));
+            Self::process_path(&entry.path(), files);
         }
     }
 
@@ -142,7 +136,7 @@ impl Multigrep {
 
     fn get_random_color_replacement(pattern: &str) -> String {
         let mut rng = rand::thread_rng();
-        let color_code = format!("\x1b[38;5;{}m", rng.gen_range(0..=255));
+        let color_code = format!("\x1b[38;5;{}m", rng.gen_range(16..=232));
         format!("{}{}{}", color_code, pattern, "\x1b[0m")
     }
 }
