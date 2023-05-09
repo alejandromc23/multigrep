@@ -85,23 +85,67 @@ impl Multigrep {
 
     fn show_coincidences(&self, queries: Vec<(String, String)>, regexps: Vec<(Regex, String)>, files: Vec<PathBuf>) {
         for file_path in files.iter() {
-            if !Self::is_valid_utf8(file_path) {
-                continue;
-            }
+            let file = Self::read_file(file_path)
+                .expect(&format!("Error reading file: {}", file_path.display()));
 
-            println!("{}Reading file: {:?}{}", "\x1b[38;2;255;165;0m", file_path, "\x1b[0m");
-
-            let file = read_to_string(file_path).unwrap();
+            let mut has_file_matches = false;
 
             file.lines()
                 .enumerate()
-                .for_each(|(i, file_line)| self.show_line_coincidences(file_line, i as u32 + 1, &queries, &regexps));
+                .for_each(|(i, file_line)| {
+                    let mut line = file_line.to_string();
+                    if !has_file_matches && self.has_coincidences(&mut line, &queries, &regexps) {
+                        println!("\n{}{:?}{}", "\x1b[32m", file_path, "\x1b[0m");
+                        has_file_matches = true;
+                    } 
 
-            println!("");
+                    if has_file_matches {
+                        self.show_line_coincidences(&line, i as u32 + 1, &queries, &regexps);
+                    }
+                });
         }
     }
 
-    fn show_line_coincidences(&self, line: &str, line_number: u32, queries: &Vec<(String, String)>, regexps: &Vec<(Regex, String)>) {
+    fn read_file(path: &PathBuf) -> Result<String> {
+        if !Self::is_valid_utf8(path) {
+            return Err(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "File is not valid UTF-8",
+                    ));
+        }
+
+        read_to_string(path)
+    }
+
+    fn has_coincidences(&self, line: &mut String, queries: &Vec<(String, String)>, regexps: &Vec<(Regex, String)>) -> bool {
+        let mut has_line_matches = false;
+
+        queries.iter().for_each(|(query, _)| {
+            if !self.flags.is_case_sensitive {
+                *line = line.to_lowercase();
+            }
+
+            if line.contains(query) {
+                has_line_matches = true;
+            }
+        });
+
+        regexps.iter().for_each(|(regexp, _)| {
+            if regexp.is_match(&line) {
+                has_line_matches = true;
+            }
+        });
+
+        has_line_matches
+    }
+
+    fn show_line_coincidences(
+        &self, 
+        line: &str, 
+        line_number: u32, 
+        queries: &Vec<(String, String)>, 
+        regexps: &Vec<(Regex, String)>
+        ) -> bool {
         let mut line = line.trim().to_string();
         let mut has_line_matches = false;
 
@@ -126,7 +170,7 @@ impl Multigrep {
         });
 
         if !has_line_matches {
-            return;
+            return false;
         }
 
         if self.flags.show_line_numbers {
@@ -134,6 +178,7 @@ impl Multigrep {
         }
 
         println!("{}", line);
+        true
     }
 
     fn is_valid_utf8(path: &Path) -> bool {
@@ -151,14 +196,14 @@ impl Multigrep {
     }
 
     fn show_inputs_to_search(queries: &Vec<(String, String)>, regexps: &Vec<(Regex, String)>) {
-        println!("Queries to localize:");
+        println!("\nQueries to localize:");
         queries.iter().enumerate().for_each(|(index, query)| {
             println!("{}: {}", index, query.1);
         });
+
         regexps.iter().enumerate().for_each(|(index, regexp)| {
             println!("{}: {}", index + queries.len(), Self::get_regex_replacement(&regexp.0, regexp.1.clone())); 
-        });
-        println!("");
+        }); 
     }
 
     fn get_query_replacement(pattern: &str) -> String {
