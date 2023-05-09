@@ -1,12 +1,11 @@
 use std::process;
 
-const VALID_FLAGS: [&str; 10] = ["--file", "--query", "--insensitive", "--path", "--number-line", "-f", "-q", "-i", "-p", "-n"];
+const VALID_FLAGS: [&str; 8] = ["--query", "--insensitive", "--path", "--number-line", "-q", "-i", "-p", "-n"];
 
 pub struct Flags {
     pub is_case_sensitive: bool,
     pub show_line_numbers: bool,
     pub queries: Vec<String>,
-    pub filenames: Vec<String>,
     pub paths: Vec<String>,
 }
 
@@ -21,7 +20,6 @@ impl Flags {
             is_case_sensitive: true,
             show_line_numbers: false,
             queries: Vec::new(),
-            filenames: Vec::new(),
             paths: Vec::new(),
         };
 
@@ -32,9 +30,6 @@ impl Flags {
                 }
                 "--number-line" | "-n" => {
                     flags.show_line_numbers = true;
-                }
-                "--file" | "-f" => {
-                    flags.filenames.append(&mut Flags::get_args_by_flag(args, flag));
                 }
                 "--query" | "-q" => {
                    flags.queries.append(&mut Flags::get_args_by_flag(args, flag)); 

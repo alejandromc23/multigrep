@@ -67,19 +67,6 @@ impl Multigrep {
     pub fn get_queries(&mut self) -> Vec<(String, String)> {
         let mut queries = Vec::new();
 
-        self.flags.filenames.iter().for_each(|filename| {
-            if !Path::new(filename).exists() {
-                Self::exit_with_error(format!("File does not exist: {}", filename));
-            }
-
-            let file = read_to_string(filename)
-                .expect(&format!("Error reading file: {}", filename));
-
-            let lines = file.lines().map(|line| (line.to_string(), Self::get_random_color_replacement(line)));
-
-            queries.extend(lines);
-        });
-
         self.flags.queries.iter().for_each(|query| {
             let mut string_query = query.to_string();
 
