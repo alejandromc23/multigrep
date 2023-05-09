@@ -23,48 +23,12 @@ impl Multigrep {
         let files = self.get_files();
         
         Self::show_queries(&queries);
-
-        for file_path in files.iter() {
-            if !Self::is_valid_utf8(file_path) {
-                continue;
-            }
-
-            println!("{}Reading file: {:?}{}", "\x1b[38;2;255;165;0m", file_path, "\x1b[0m");
- 
-            let file = read_to_string(file_path).unwrap();
-            
-            file.lines().enumerate().for_each(|(i, file_line)| {
-                let mut line = file_line.trim().to_string();
-                let mut has_line_matches = false;
-
-                for (query, replacement) in queries.iter() {
-                    if !self.flags.is_case_sensitive {
-                        line = line.to_lowercase();
-                    }
-
-                    if line.contains(query) {
-                        line = line.replace(query, replacement);
-                        has_line_matches = true;
-                    }
-                }
-
-                if !has_line_matches {
-                    return;
-                }
-
-                if self.flags.show_line_numbers {
-                    line = format!("{}: {}", i+1, line);
-                }
-
-                println!("{}", line);
-            });
-            println!("");
-        }
+        self.show_coincidences(queries, files);
         
         Ok(())
     }
 
-    pub fn get_queries(&mut self) -> Vec<(String, String)> {
+    fn get_queries(&mut self) -> Vec<(String, String)> {
         let mut queries = Vec::new();
 
         self.flags.queries.iter().for_each(|query| {
@@ -81,7 +45,7 @@ impl Multigrep {
     }
 
 
-    pub fn get_files(&self) -> Vec<PathBuf> {
+    fn get_files(&self) -> Vec<PathBuf> {
         let mut files = Vec::new();
 
         self.flags.paths.iter().for_each(|path_str| {
@@ -110,6 +74,50 @@ impl Multigrep {
             let entry = entry_result.expect(&format!("Error reading path: {}", path.display()));
             Self::process_path(&entry.path(), files);
         }
+    }
+
+    fn show_coincidences(&self, queries: Vec<(String, String)>, files: Vec<PathBuf>) {
+        for file_path in files.iter() {
+            if !Self::is_valid_utf8(file_path) {
+                continue;
+            }
+
+            println!("{}Reading file: {:?}{}", "\x1b[38;2;255;165;0m", file_path, "\x1b[0m");
+
+            let file = read_to_string(file_path).unwrap();
+
+            file.lines()
+                .enumerate()
+                .for_each(|(i, file_line)| self.show_line_coincidences(file_line, i as u32 + 1, &queries));
+            
+            println!("");
+        }
+    }
+
+    fn show_line_coincidences(&self, line: &str, line_number: u32, queries: &Vec<(String, String)>) {
+        let mut line = line.trim().to_string();
+        let mut has_line_matches = false;
+
+        for (query, replacement) in queries.iter() {
+            if !self.flags.is_case_sensitive {
+                line = line.to_lowercase();
+            }
+
+            if line.contains(query) {
+                line = line.replace(query, replacement);
+                has_line_matches = true;
+            }
+        }
+
+        if !has_line_matches {
+            return;
+        }
+
+        if self.flags.show_line_numbers {
+            line = format!("{}: {}", line_number, line);
+        }
+
+        println!("{}", line);
     }
 
     fn is_valid_utf8(path: &Path) -> bool {
