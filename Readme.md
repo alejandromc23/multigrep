@@ -2,6 +2,8 @@
 
 Multigrep is a Rust program that allows searching for queries and regex patterns in utf-8 encoded files. It can search for the queries in a specific file or folder recursively.
 
+![Screenshot 1](./public/image.png)
+
 ## Prerequisites
 
 To build and use Multigrep, you'll need to have the following installed on your system:
