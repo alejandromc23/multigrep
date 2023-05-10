@@ -18,8 +18,14 @@ To install Multigrep, follow these steps:
 ```bash
 git clone https://github.com/your-username/multigrep.git
 cd multigrep
+```
+2. Build the program using the included build.sh script:
+
+```bash
 ./build.sh
 ```
+
+This will compile the program and install it to your system's /usr/local/bin directory. You may be prompted to enter your password to authorize the installation.
 
 ## Features
 
