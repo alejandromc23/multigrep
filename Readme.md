@@ -18,7 +18,7 @@ To install Multigrep, follow these steps:
 1. Clone the Git repository:
 
 ```bash
-git clone https://github.com/your-username/multigrep.git
+git clone https://github.com/alejandromc23/multigrep.git
 cd multigrep
 ```
 2. Build the program using the included build.sh script:
